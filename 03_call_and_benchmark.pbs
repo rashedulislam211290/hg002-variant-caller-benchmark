@@ -1,0 +1,69 @@
+#!/bin/bash
+#PBS -N variant_benchmark
+#PBS -q thin
+#PBS -l select=1:ncpus=4:mem=16gb
+#PBS -l walltime=24:00:00
+#PBS -j oe
+#PBS -o variant_benchmark.log
+
+# Steps 3-5: call variants with BCFtools and FreeBayes, normalise, benchmark with hap.py.
+# Submit from the repository root:  qsub scripts/03_call_and_benchmark.pbs
+# Queue name and resources may need adjusting for your cluster.
+
+cd "${PBS_O_WORKDIR:-$PWD}"
+source ~/.bashrc
+conda activate ngs
+set -eo pipefail
+
+REF=GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta
+BAM=input/HG002.novaseq.pcr-free.35x.dedup.grch38_no_alt.chr20.bam
+TRUTH=benchmark/HG002_GRCh38_1_22_v4.2.1_benchmark.vcf.gz
+BED=benchmark/HG002_GRCh38_1_22_v4.2.1_benchmark_noinconsistent.bed
+REGION=chr20
+T=4
+
+for f in "$REF" "${REF}.fai" "$BAM" "${BAM}.bai" "$TRUTH" "${TRUTH}.tbi" "$BED"; do
+  [ -s "$f" ] || { echo "ERROR: missing or empty input: $f"; exit 1; }
+done
+mkdir -p calls results
+
+echo "== Software versions"
+bcftools --version | head -2
+samtools --version | head -1
+freebayes --version
+
+echo "== Tool A: BCFtools  $(date)"
+bcftools mpileup --threads $T -f "$REF" -r "$REGION" -a AD,DP "$BAM" | \
+  bcftools call --threads $T -mv -Oz -o calls/bcftools.vcf.gz
+bcftools index -t -f calls/bcftools.vcf.gz
+
+echo "== Tool B: FreeBayes  $(date)"
+freebayes -f "$REF" -r "$REGION" "$BAM" | bgzip -c > calls/freebayes.vcf.gz
+bcftools index -t -f calls/freebayes.vcf.gz
+
+echo "== Normalisation  $(date)"
+for TOOL in bcftools freebayes; do
+  bcftools norm -f "$REF" -m -any calls/${TOOL}.vcf.gz -Oz -o calls/${TOOL}.norm.vcf.gz
+  bcftools index -t -f calls/${TOOL}.norm.vcf.gz
+done
+
+echo "== Benchmarking with hap.py  $(date)"
+conda activate happy
+export HGREF="$PWD/$REF"
+hap.py --version 2>&1 | tail -1
+for TOOL in bcftools freebayes; do
+  # -l restricts the comparison to chr20; without it, truth variants on all
+  # other chromosomes would be counted as false negatives.
+  hap.py "$TRUTH" calls/${TOOL}.norm.vcf.gz \
+    -f "$BED" -r "$REF" -l "$REGION" --threads $T \
+    -o results/${TOOL}
+done
+
+echo "== Summary"
+for TOOL in bcftools freebayes; do
+  echo "--- $TOOL"
+  awk -F, 'NR==1{for(i=1;i<=NF;i++)c[$i]=i}
+    {print $c["Type"],$c["Filter"],$c["TRUTH.TP"],$c["TRUTH.FN"],$c["QUERY.FP"],$c["METRIC.Recall"],$c["METRIC.Precision"],$c["METRIC.F1_Score"]}' \
+    OFS='\t' results/${TOOL}.summary.csv | column -t
+done
+echo "All done: $(date)"

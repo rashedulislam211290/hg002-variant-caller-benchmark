@@ -1,0 +1,10 @@
+name: ngs
+channels:
+  - conda-forge
+  - bioconda
+dependencies:
+  - samtools
+  - bcftools
+  - htslib
+  - freebayes
+  - wget
