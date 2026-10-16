@@ -1,7 +1,7 @@
 #!/bin/bash
 # Step 1: download and index the GRCh38 no-alt analysis set.
 # Run from the repository root on a node with internet access (usually the login node):
-#   bash scripts/01_download_reference.sh
+#   bash 01_download_reference.sh
 set -eo pipefail
 
 REF=GCA_000001405.15_GRCh38_no_alt_analysis_set.fasta

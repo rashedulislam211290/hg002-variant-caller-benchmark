@@ -14,7 +14,6 @@ benchmark/
 calls/
 # hap.py writes many files; only the summary CSVs are kept
 results/*
-!results/README.md
 !results/*.summary.csv
 # Logs and system files
 *.log
