@@ -7,7 +7,7 @@
 #PBS -o variant_benchmark.log
 
 # Steps 3-5: call variants with BCFtools and FreeBayes, normalise, benchmark with hap.py.
-# Submit from the repository root:  qsub scripts/03_call_and_benchmark.pbs
+# Submit from the repository root:  qsub 03_call_and_benchmark.pbs
 # Queue name and resources may need adjusting for your cluster.
 
 cd "${PBS_O_WORKDIR:-$PWD}"

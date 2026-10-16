@@ -2,7 +2,7 @@
 """Step 6: build Figure 1 and a summary table from the hap.py output.
 
 Usage (from the repository root):
-    python scripts/04_make_figure.py --results results --out figures
+    python 04_make_figure.py --results results --out figures
 Reads results/bcftools.summary.csv and results/freebayes.summary.csv.
 """
 import argparse

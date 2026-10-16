@@ -1,7 +1,7 @@
 #!/bin/bash
 # Step 2: download HG002 chr20 reads and the GIAB v4.2.1 truth set.
 # Run from the repository root on a node with internet access (usually the login node):
-#   bash scripts/02_download_data.sh
+#   bash 02_download_data.sh
 set -eo pipefail
 mkdir -p input benchmark
 
